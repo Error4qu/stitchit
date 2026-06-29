@@ -1,174 +1,258 @@
-import type { 
-  User, 
-  Address, 
-  Fabric, 
-  Style, 
-  Order, 
-  OrderItem, 
-  TailorVisit, 
-  Measurement, 
-  Shipment, 
+import type {
+  User,
+  Address,
+  Fabric,
+  Style,
+  Order,
+  TailorVisit,
+  Measurement,
+  Shipment,
   Review,
-  PaginatedResponse 
+  PaginatedResponse,
+  AlterationCategory,
+  AlterationService,
+  AlterationOrder,
 } from '@stitchit/types';
 import { ApiClient } from './api-client';
 
 export class ApiEndpoints {
   constructor(private client: ApiClient) {}
 
-  // Auth Endpoints
-  async login(email: string, password: string) {
-    return this.client.post<{ token: string; user: User }>('/auth/login', { email, password });
+  // ─── Auth ────────────────────────────────────────────────────────────
+  login(email: string, password: string) {
+    return this.client.post<User>('/auth/login', { email, password });
   }
 
-  async register(data: { email: string; password: string; name: string; phone: string }) {
-    return this.client.post<{ token: string; user: User }>('/auth/register', data);
+  register(data: { name: string; email: string; password: string; phone?: string }) {
+    return this.client.post<User>('/auth/register', data);
   }
 
-  async googleLogin(token: string) {
-    return this.client.post<{ token: string; user: User }>('/auth/google', { token });
+  logout() {
+    return this.client.post<void>('/auth/logout');
   }
 
-  async refreshToken(refreshToken: string) {
-    return this.client.post<{ token: string }>('/auth/refresh', { refreshToken });
+  refresh() {
+    return this.client.post<User>('/auth/refresh');
   }
 
-  // User Endpoints
-  async getProfile() {
-    return this.client.get<User>('/users/me');
+  me() {
+    return this.client.get<User>('/auth/me');
   }
 
-  async updateProfile(data: Partial<User>) {
+  // ─── User / Profile ──────────────────────────────────────────────────
+  getProfile() {
+    return this.client.get<User>('/auth/me');
+  }
+
+  updateProfile(data: Partial<Pick<User, 'name' | 'phone'>>) {
     return this.client.patch<User>('/users/me', data);
   }
 
-  // Address Endpoints
-  async getAddresses() {
+  // ─── Addresses ───────────────────────────────────────────────────────
+  getAddresses() {
     return this.client.get<Address[]>('/addresses');
   }
 
-  async createAddress(data: Omit<Address, 'id' | 'userId'>) {
+  createAddress(data: Omit<Address, 'id' | 'userId'>) {
     return this.client.post<Address>('/addresses', data);
   }
 
-  async updateAddress(id: string, data: Partial<Address>) {
+  updateAddress(id: string, data: Partial<Address>) {
     return this.client.patch<Address>(`/addresses/${id}`, data);
   }
 
-  async deleteAddress(id: string) {
+  deleteAddress(id: string) {
     return this.client.delete<void>(`/addresses/${id}`);
   }
 
-  // Catalog Endpoints
-  async getFabrics(params?: { page?: number; pageSize?: number }) {
-    return this.client.get<PaginatedResponse<Fabric>>('/fabrics', params);
+  // ─── Catalog ─────────────────────────────────────────────────────────
+  getFabrics(params?: { page?: number; pageSize?: number }) {
+    const query = params ? `?page=${params.page ?? 0}&size=${params.pageSize ?? 12}` : '';
+    return this.client.get<PaginatedResponse<Fabric>>(`/fabrics${query}`);
   }
 
-  async getFabric(id: string) {
+  getFabric(id: string) {
     return this.client.get<Fabric>(`/fabrics/${id}`);
   }
 
-  async getStyles(params?: { page?: number; pageSize?: number; category?: string }) {
-    return this.client.get<PaginatedResponse<Style>>('/styles', params);
+  getStyles(params?: { page?: number; pageSize?: number; category?: string }) {
+    const q = new URLSearchParams();
+    if (params?.page != null) q.set('page', String(params.page));
+    if (params?.pageSize != null) q.set('size', String(params.pageSize));
+    if (params?.category) q.set('category', params.category);
+    const query = q.toString() ? `?${q.toString()}` : '';
+    return this.client.get<PaginatedResponse<Style>>(`/styles${query}`);
   }
 
-  async getStyle(id: string) {
+  getStyle(id: string) {
     return this.client.get<Style>(`/styles/${id}`);
   }
 
-  // Cart Endpoints
-  async getCart() {
-    return this.client.get<OrderItem[]>('/cart');
+  // ─── Cart ────────────────────────────────────────────────────────────
+  getCart() {
+    return this.client.get<Order[]>('/cart');
   }
 
-  async addToCart(item: Omit<OrderItem, 'id' | 'orderId'>) {
-    return this.client.post<OrderItem>('/cart', item);
+  addToCart(item: { styleId: string; fabricId: string; quantity: number; customizations: Record<string, string> }) {
+    return this.client.post<Order>('/cart', item);
   }
 
-  async updateCartItem(id: string, data: Partial<OrderItem>) {
-    return this.client.patch<OrderItem>(`/cart/${id}`, data);
+  updateCartItem(id: string, data: { quantity: number }) {
+    return this.client.patch<Order>(`/cart/${id}`, data);
   }
 
-  async removeFromCart(id: string) {
+  removeFromCart(id: string) {
     return this.client.delete<void>(`/cart/${id}`);
   }
 
-  async clearCart() {
+  clearCart() {
     return this.client.delete<void>('/cart');
   }
 
-  // Order Endpoints
-  async getOrders(params?: { page?: number; pageSize?: number; status?: string }) {
-    return this.client.get<PaginatedResponse<Order>>('/orders', params);
+  // ─── Orders ──────────────────────────────────────────────────────────
+  getOrders(params?: { page?: number; pageSize?: number; status?: string }) {
+    const q = new URLSearchParams();
+    if (params?.page != null) q.set('page', String(params.page));
+    if (params?.pageSize != null) q.set('size', String(params.pageSize));
+    if (params?.status) q.set('status', params.status);
+    const query = q.toString() ? `?${q.toString()}` : '';
+    return this.client.get<PaginatedResponse<Order>>(`/orders${query}`);
   }
 
-  async getOrder(id: string) {
+  getOrder(id: string) {
     return this.client.get<Order>(`/orders/${id}`);
   }
 
-  async createOrder(data: { shippingAddressId: string }) {
+  createOrder(data: { shippingAddressId: string }) {
     return this.client.post<Order>('/orders', data);
   }
 
-  // Tailor Visit Endpoints
-  async scheduleVisit(orderId: string, date: string) {
+  // ─── Tailor Visits ───────────────────────────────────────────────────
+  scheduleVisit(orderId: string, date: string) {
     return this.client.post<TailorVisit>('/visits', { orderId, scheduledDate: date });
   }
 
-  async getVisits(params?: { page?: number; pageSize?: number }) {
-    return this.client.get<PaginatedResponse<TailorVisit>>('/visits', params);
+  getVisits(params?: { page?: number; pageSize?: number }) {
+    const query = params ? `?page=${params.page ?? 0}&size=${params.pageSize ?? 10}` : '';
+    return this.client.get<PaginatedResponse<TailorVisit>>(`/visits${query}`);
   }
 
-  async updateVisit(id: string, data: Partial<TailorVisit>) {
+  updateVisit(id: string, data: Partial<TailorVisit>) {
     return this.client.patch<TailorVisit>(`/visits/${id}`, data);
   }
 
-  // Measurement Endpoints
-  async submitMeasurement(data: Omit<Measurement, 'id' | 'submittedAt'>) {
+  // ─── Measurements ────────────────────────────────────────────────────
+  submitMeasurement(data: Omit<Measurement, 'id' | 'submittedAt'>) {
     return this.client.post<Measurement>('/measurements', data);
   }
 
-  async getMeasurements(orderId: string) {
+  getMeasurements(orderId: string) {
     return this.client.get<Measurement[]>(`/orders/${orderId}/measurements`);
   }
 
-  // Shipment Endpoints
-  async getShipment(orderId: string) {
+  // ─── Shipments ───────────────────────────────────────────────────────
+  getShipment(orderId: string) {
     return this.client.get<Shipment>(`/orders/${orderId}/shipment`);
   }
 
-  // Review Endpoints
-  async createReview(data: Omit<Review, 'id' | 'createdAt'>) {
+  // ─── Reviews ─────────────────────────────────────────────────────────
+  createReview(data: Omit<Review, 'id' | 'createdAt'>) {
     return this.client.post<Review>('/reviews', data);
   }
 
-  async getReviews(params?: { page?: number; pageSize?: number }) {
-    return this.client.get<PaginatedResponse<Review>>('/reviews', params);
+  getReviews(params?: { page?: number; pageSize?: number }) {
+    const query = params ? `?page=${params.page ?? 0}&size=${params.pageSize ?? 10}` : '';
+    return this.client.get<PaginatedResponse<Review>>(`/reviews${query}`);
   }
 
-  // Notification Endpoints
-  async getNotifications() {
-    return this.client.get('/notifications');
+  // ─── Notifications ───────────────────────────────────────────────────
+  getNotifications() {
+    return this.client.get<unknown[]>('/notifications');
   }
 
-  async markNotificationRead(id: string) {
-    return this.client.patch(`/notifications/${id}/read`, {});
+  markNotificationRead(id: string) {
+    return this.client.patch<void>(`/notifications/${id}/read`);
   }
 
-  // Admin Endpoints
-  async getAllUsers(params?: { page?: number; pageSize?: number }) {
-    return this.client.get<PaginatedResponse<User>>('/admin/users', params);
+  // ─── Admin ───────────────────────────────────────────────────────────
+  getAllUsers(params?: { page?: number; pageSize?: number }) {
+    const query = params ? `?page=${params.page ?? 0}&size=${params.pageSize ?? 20}` : '';
+    return this.client.get<PaginatedResponse<User>>(`/admin/users${query}`);
   }
 
-  async assignTailor(orderId: string, tailorId: string) {
+  assignTailor(orderId: string, tailorId: string) {
     return this.client.post<Order>(`/admin/orders/${orderId}/assign`, { tailorId });
   }
 
-  async updateOrderStatus(orderId: string, status: string) {
+  updateOrderStatus(orderId: string, status: string) {
     return this.client.patch<Order>(`/admin/orders/${orderId}/status`, { status });
   }
 
-  async getAnalytics() {
-    return this.client.get('/admin/analytics');
+  getAnalytics() {
+    return this.client.get<unknown>('/admin/analytics');
+  }
+
+  // ─── Alterations ─────────────────────────────────────────────────────
+  getAlterationCategories() {
+    return this.client.get<AlterationCategory[]>('/alterations/categories');
+  }
+
+  getAlterationServices(categoryId: number) {
+    return this.client.get<AlterationService[]>(`/alterations/categories/${categoryId}/services`);
+  }
+
+  createAlterationOrder(data: {
+    addressId: number;
+    scheduledDate: string;
+    scheduledSlot: string;
+    items: Array<{
+      alterationServiceId: number;
+      garmentDescription?: string;
+      customerNotes?: string;
+    }>;
+    specialInstructions?: string;
+  }) {
+    return this.client.post<AlterationOrder>('/alterations/orders', data);
+  }
+
+  getMyAlterationOrders(params?: { page?: number; size?: number }) {
+    const query = params ? `?page=${params.page ?? 0}&size=${params.size ?? 10}` : '';
+    return this.client.get<PaginatedResponse<AlterationOrder>>(`/alterations/orders${query}`);
+  }
+
+  getTailorAlterationOrders(params?: { page?: number; size?: number }) {
+    const query = params ? `?page=${params.page ?? 0}&size=${params.size ?? 10}` : '';
+    return this.client.get<PaginatedResponse<AlterationOrder>>(`/alterations/orders/tailor${query}`);
+  }
+
+  getAllAlterationOrders(params?: { page?: number; size?: number }) {
+    const query = params ? `?page=${params.page ?? 0}&size=${params.size ?? 20}` : '';
+    return this.client.get<PaginatedResponse<AlterationOrder>>(`/alterations/orders/admin${query}`);
+  }
+
+  getAlterationOrder(orderId: number) {
+    return this.client.get<AlterationOrder>(`/alterations/orders/${orderId}`);
+  }
+
+  updateAlterationStatus(orderId: number, status: string, tailorNotes?: string) {
+    return this.client.patch<AlterationOrder>(`/alterations/orders/${orderId}/status`, {
+      status,
+      tailorNotes,
+    });
+  }
+
+  uploadAlterationPhotos(orderId: number, photoType: 'BEFORE' | 'AFTER', photoUrls: string[]) {
+    return this.client.post<AlterationOrder>(`/alterations/orders/${orderId}/photos`, {
+      photoType,
+      photoUrls,
+    });
+  }
+
+  assignAlterationTailor(orderId: number, tailorId: number) {
+    return this.client.post<AlterationOrder>(
+      `/alterations/orders/${orderId}/assign?tailorId=${tailorId}`
+    );
   }
 }
+
+export const createApiEndpoints = (client: ApiClient) => new ApiEndpoints(client);

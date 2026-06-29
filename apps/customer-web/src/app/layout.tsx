@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '../components/theme-provider';
 import { Navbar } from '../components/navbar';
 import { Footer } from '../components/footer';
+import { Providers } from './providers';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -19,24 +20,21 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: 'StitchIt - Premium Online Cloth Tailoring',
-  description: 'Browse exquisite fabric collections and clothing styles, place bespoke orders, and have master tailors visit your location for perfect measurements.',
+  description:
+    'Browse exquisite fabric collections and clothing styles, place bespoke orders, and have master tailors visit your location for perfect measurements.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} h-full`}>
       <body className="flex min-h-screen flex-col bg-[#F8F5F0] text-[#2D2D2D] dark:bg-[#0F1B2D] dark:text-[#F8F5F0] antialiased transition-colors duration-300">
-        <ThemeProvider>
-          <Navbar />
-          <div className="flex-1 pt-20">
-            {children}
-          </div>
-          <Footer />
-        </ThemeProvider>
+        <Providers>
+          <ThemeProvider>
+            <Navbar />
+            <div className="flex-1 pt-20">{children}</div>
+            <Footer />
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

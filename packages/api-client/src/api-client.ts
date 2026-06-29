@@ -3,78 +3,77 @@ import { ApiRequestError, type ApiError } from './types';
 
 export class ApiClient {
   private baseUrl: string;
-  private token: string | null = null;
 
-  constructor(baseUrl: string = 'http://localhost:8080/api/v1') {
+  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1') {
     this.baseUrl = baseUrl;
   }
 
-  setToken(token: string) {
-    this.token = token;
-  }
-
-  clearToken() {
-    this.token = null;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    };
 
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include',
     });
 
+    if (response.status === 204) {
+      return undefined as unknown as T;
+    }
+
+    const json = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to parse response',
+      data: null,
+    }));
+
     if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        message: 'An unknown error occurred',
+      const error: ApiError = {
+        message: json.message ?? 'An error occurred',
         statusCode: response.status,
-      }));
+        code: json.code,
+        details: json.details,
+      };
       throw new ApiRequestError(error, response);
     }
 
-    const data: ApiResponse<T> = await response.json();
-    return data.data;
+    const apiResponse = json as ApiResponse<T>;
+    return apiResponse.data;
   }
 
-  async get<T>(endpoint: string): Promise<T> {
+  get<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, body: any): Promise<T> {
+  post<T>(endpoint: string, body?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   }
 
-  async put<T>(endpoint: string, body: any): Promise<T> {
+  put<T>(endpoint: string, body?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: JSON.stringify(body),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   }
 
-  async patch<T>(endpoint: string, body: any): Promise<T> {
+  patch<T>(endpoint: string, body?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: JSON.stringify(body),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
+  delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
 }
+
+export const apiClient = new ApiClient();

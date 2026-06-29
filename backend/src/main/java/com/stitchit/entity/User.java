@@ -1,7 +1,6 @@
 package com.stitchit.entity;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,12 +19,18 @@ public class User {
 
     private String phone;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String password;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    @Column(nullable = false, length = 20)
+    private String provider = "LOCAL";
+
+    @Column(name = "provider_account_id")
+    private String providerAccountId;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -48,6 +53,7 @@ public class User {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (provider == null) provider = "LOCAL";
     }
 
     @PreUpdate
@@ -67,6 +73,10 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    public String getProvider() { return provider; }
+    public void setProvider(String provider) { this.provider = provider; }
+    public String getProviderAccountId() { return providerAccountId; }
+    public void setProviderAccountId(String providerAccountId) { this.providerAccountId = providerAccountId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

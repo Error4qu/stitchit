@@ -1,22 +1,31 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
+import { Providers } from '../components/providers';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'StitchIt Tailor Portal',
-  description: 'Manage assigned orders, submit measurements, and update order status',
+  description: 'Manage your assigned tailoring and alteration orders.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" className={`${inter.variable} ${playfair.variable} h-full`}>
+      <body className="flex min-h-screen flex-col bg-[#F8F5F0] text-[#2D2D2D] antialiased">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
