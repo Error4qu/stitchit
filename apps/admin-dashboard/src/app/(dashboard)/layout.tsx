@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Scissors, LayoutDashboard, Wrench, Users, ShoppingBag, LogOut, Shield } from 'lucide-react';
+import { Scissors, LayoutDashboard, Wrench, Users, LogOut, Shield } from 'lucide-react';
 import { useLogout } from '../../hooks/use-auth';
 import { useAuthStore } from '../../store/auth-store';
 import { ProtectedRoute } from '../../components/protected-route';
@@ -11,7 +11,6 @@ import { ProtectedRoute } from '../../components/protected-route';
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/dashboard/alterations', label: 'Alterations', icon: Wrench },
-  { href: '/dashboard/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/dashboard/users', label: 'Users', icon: Users },
 ];
 

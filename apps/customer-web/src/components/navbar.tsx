@@ -3,15 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Moon, ShoppingBag, Menu, X, User, ChevronDown, LogOut, Scissors } from 'lucide-react';
+import { Sun, Moon, Menu, X, User, ChevronDown, LogOut, Scissors } from 'lucide-react';
 import { useTheme } from './theme-provider';
-import { useCartStore } from '../store/cart-store';
 import { useAuthStore } from '../store/auth-store';
 import { useCurrentUser, useLogout } from '../hooks/use-auth';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
-  { href: '/catalog', label: 'Fabric Catalog' },
   { href: '/alterations', label: 'Alter My Cloth' },
 ];
 
@@ -23,7 +21,6 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const itemCount = useCartStore((state) => state.getItemCount());
   const { user } = useAuthStore();
   const logoutMutation = useLogout();
 
@@ -93,24 +90,6 @@ export function Navbar() {
             >
               {mounted && isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-
-            {/* Cart Icon */}
-            <Link
-              href="/cart"
-              className="relative p-2 rounded-full text-[#2D2D2D] dark:text-[#F8F5F0] hover:bg-[#0F1B2D]/5 dark:hover:bg-[#F8F5F0]/5 transition-colors"
-              aria-label="Shopping cart"
-            >
-              <ShoppingBag className="w-5 h-5" />
-              {mounted && itemCount > 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#C9A84C] text-[11px] font-bold text-[#0F1B2D]"
-                >
-                  {itemCount}
-                </motion.span>
-              )}
-            </Link>
 
             {/* Auth: User Menu or Login */}
             {mounted && (

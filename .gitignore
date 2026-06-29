@@ -43,6 +43,9 @@ next-env.d.ts
 # IDE
 .idea/
 .vscode/
+
+# AI agent config
+.devin/
 *.swp
 *.swo
 *~
