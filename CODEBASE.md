@@ -1,14 +1,14 @@
 # StitchIt Codebase Documentation
 
-StitchIt is a cloth tailoring platform. Customers book tailor visits for garment alterations. Tailors manage assigned jobs and update status. Admins have full oversight.
+StitchIt is a cloth alteration platform. Customers book tailor visits for garment alterations. Tailors manage assigned jobs and update status. Admins have full oversight.
 
-See `STITCHPLAN.md` for the issue tracker, bug assignments, and 4-week sprint plan.
+See `STITCHPLAN.md` for the issue tracker, bug assignments, and sprint plan.
 
 ---
 
 ## 1. Monorepo Structure
 
-Managed with Turborepo and pnpm workspaces.
+Managed with Turborepo and npm workspaces.
 
 ```
 StitchIt/
@@ -35,10 +35,10 @@ StitchIt/
 | Frontend | Next.js 15, React 19, Tailwind CSS, Framer Motion |
 | State | Zustand (auth), TanStack Query (server state) |
 | Backend | Spring Boot 3.3, Java 21 |
-| Database | PostgreSQL — schema managed by Flyway V1–V8 |
+| Database | PostgreSQL (Supabase) — schema managed by Flyway V1, V7, V8 |
 | Cache | Redis — refresh token JTI revocation + rate limiting |
 | Auth | JWT in httpOnly cookies (15 min + 7 day refresh) + Google OAuth2 |
-| Monorepo | Turborepo + pnpm workspaces |
+| Monorepo | Turborepo + npm workspaces |
 
 ---
 
@@ -52,29 +52,39 @@ StitchIt/
 backend/src/main/java/com/stitchit/
 ├── controller/
 │   ├── AuthController.java
-│   ├── AlterationController.java
-│   ├── CatalogController.java
-│   ├── CartController.java
-│   └── OrderController.java
+│   └── AlterationController.java
 ├── service/
 │   ├── AuthService.java
-│   ├── AlterationOrderService.java
-│   ├── CatalogService.java
-│   ├── CartService.java
-│   └── OrderService.java
-├── entity/            # JPA entities for every domain object
-├── repository/        # Spring Data JPA repositories
+│   └── AlterationOrderService.java
+├── entity/
+│   ├── User.java
+│   ├── Role.java
+│   ├── Address.java
+│   ├── AlterationCategory.java
+│   ├── AlterationService.java
+│   ├── AlterationOrder.java
+│   ├── AlterationOrderItem.java
+│   ├── AlterationStatus.java
+│   └── SlotTime.java
+├── repository/
+│   ├── UserRepository.java
+│   ├── AddressRepository.java
+│   ├── AlterationCategoryRepository.java
+│   ├── AlterationServiceRepository.java
+│   └── AlterationOrderRepository.java
 ├── dto/               # Request/response DTOs
 ├── security/
 │   ├── JwtService.java
 │   ├── JwtAuthenticationFilter.java
 │   ├── RateLimitFilter.java
+│   ├── CookieUtils.java
 │   ├── OAuth2UserService.java
 │   ├── OAuth2AuthenticationSuccessHandler.java
 │   └── UserPrincipal.java
 ├── config/
-│   ├── SecurityConfig.java       # Two SecurityFilterChains
+│   ├── SecurityConfig.java
 │   ├── AuthenticationConfig.java
+│   ├── DevDataInitializer.java
 │   └── OpenApiConfig.java
 └── exception/
     └── GlobalExceptionHandler.java
@@ -93,14 +103,12 @@ backend/src/main/java/com/stitchit/
 
 Tokens are stored in httpOnly cookies, never in JS-accessible storage.
 
-| Cookie | Lifetime | Purpose |
-|--------|----------|---------|
-| `jwt` | 15 minutes | Access token sent on every API call |
-| `refresh_token` | 7 days | Used to rotate the access token; JTI stored in Redis for revocation |
+| Cookie | Path | Lifetime | Purpose |
+|--------|------|----------|---------|
+| `jwt` | `/api` | 15 minutes | Access token sent on every API call |
+| `refresh_token` | `/api/v1/auth` | 7 days | Used to rotate the access token; JTI stored in Redis for revocation |
 
-`JwtService` generates tokens with `sub=userId`, `role` claim, `type=access|refresh`, `jti=random UUID`.
-
-> **Bug C4:** `cookie.setSecure(false)` hardcoded in `AuthController.java:95` — must be conditional on environment before production.
+`CookieUtils` centralises cookie creation — `SameSite=Lax`, `Secure` flag driven by `app.cookie.secure` property (false in dev/local, true in prod).
 
 ### Auth Endpoints
 
@@ -121,13 +129,20 @@ Tokens are stored in httpOnly cookies, never in JS-accessible storage.
 
 ### Rate Limiting
 
-`RateLimitFilter` — 10 requests per 60 seconds per IP, Redis-backed. Fails open if Redis is unavailable.
-
-> **Bug C7:** Filter applies to all `/api/v1/auth/**` including `/auth/me` and `/auth/refresh`. Should only apply to `/auth/login` and `/auth/register`.
+`RateLimitFilter` — sliding-window (Redis sorted set, Lua script), 10 requests per 60 seconds per IP. Applies to `/api/v1/auth/login` and `/api/v1/auth/register` only. Trusted proxy IPs configurable via `app.rate-limit.trusted-proxies`. Fails open with ERROR log if Redis is unavailable.
 
 ### Role Enforcement
 
-`@PreAuthorize("hasRole('TAILOR')")` etc. on controller methods (authoritative). Frontend portals also check role after login and reject wrong-role accounts (defense in depth).
+`@PreAuthorize("hasRole('TAILOR')")` etc. on controller methods. Frontend portals also check role after login and reject wrong-role accounts.
+
+### Dev Seed Accounts
+
+`DevDataInitializer` runs on `dev` and `local` profiles only, seeds on startup if emails don't exist:
+
+| Role | Email | Password |
+|------|-------|----------|
+| ADMIN | `admin@stitchit.com` | `Admin@123` |
+| TAILOR | `tailor@stitchit.com` | `Tailor@123` |
 
 ---
 
@@ -138,13 +153,10 @@ Migrations in `backend/src/main/resources/db/migration/`:
 | Version | Contents |
 |---------|---------|
 | V1 | `users`, `addresses` |
-| V2 | `fabrics`, `styles`, `customization_options` |
-| V3 | `cart_items` |
-| V4 | `orders`, `order_items` |
-| V5 | `tailor_visits`, `measurements` |
-| V6 | `shipments`, `reviews` |
 | V7 | `provider`/`provider_account_id` on users; all alteration tables |
 | V8 | Seed — 8 alteration categories, 40+ services with INR prices |
+
+Database: Supabase PostgreSQL. Connection via `DB_PASSWORD` env var (see Local Development).
 
 ---
 
@@ -202,22 +214,26 @@ packages/api-client/src/
 └── index.ts
 ```
 
-**Key endpoints:**
+**Endpoints:**
 
 | Method | Backend route |
 |--------|--------------|
 | `login(email, password)` | `POST /auth/login` |
 | `register(data)` | `POST /auth/register` |
-| `getCurrentUser()` | `GET /auth/me` |
-| `getCategories()` | `GET /alterations/categories` |
-| `getServicesByCategory(id)` | `GET /alterations/categories/{id}/services` |
-| `createAlterationOrder(data)` | `POST /alterations/orders` |
-| `getMyAlterationOrders(page, size)` | `GET /alterations/orders` |
-| `getAlterationOrderById(id)` | `GET /alterations/orders/{id}` |
-| `updateAlterationStatus(id, status)` | `PATCH /alterations/orders/{id}/status` |
-| `assignAlterationTailor(orderId, tailorId)` | `POST /alterations/orders/{orderId}/assign?tailorId=` |
+| `logout()` | `POST /auth/logout` |
+| `me()` | `GET /auth/me` |
 | `getAddresses()` | `GET /addresses` — **AddressController not built yet (C1)** |
 | `getAllUsers()` | `GET /admin/users` — **endpoint missing (C2)** |
+| `getAlterationCategories()` | `GET /alterations/categories` |
+| `getAlterationServices(id)` | `GET /alterations/categories/{id}/services` |
+| `createAlterationOrder(data)` | `POST /alterations/orders` |
+| `getMyAlterationOrders()` | `GET /alterations/orders` |
+| `getTailorAlterationOrders()` | `GET /alterations/orders/tailor` |
+| `getAllAlterationOrders()` | `GET /alterations/orders/admin` |
+| `getAlterationOrder(id)` | `GET /alterations/orders/{id}` |
+| `updateAlterationStatus(id, status)` | `PATCH /alterations/orders/{id}/status` |
+| `uploadAlterationPhotos(id, type, urls)` | `POST /alterations/orders/{id}/photos` |
+| `assignAlterationTailor(orderId, tailorId)` | `POST /alterations/orders/{id}/assign?tailorId=` |
 
 ### @stitchit/ui
 
@@ -231,8 +247,7 @@ packages/ui/src/components/
 └── toast.tsx      # ToastProvider + useToast()
 ```
 
-**Toast API:** `const { toast, success, error, warning, info } = useToast()`  
-Use `success('message')` or `toast('message', 'success')`. Never `.call()`.
+**Toast API:** `const { toast, success, error, warning, info } = useToast()`
 
 ---
 
@@ -312,34 +327,33 @@ Auto-refreshes every 30 seconds. Status advance button disabled on DELIVERED.
 | Gold | `#C9A84C` |
 | Body text | `#2D2D2D` |
 
-All three apps use these via Tailwind arbitrary values.
-
 ---
 
 ## 13. Local Development
 
 ### Spring Profiles
 
-- **`local`** (`application-local.properties`) — PostgreSQL + Redis via Docker, Flyway enabled, Kafka excluded, Google OAuth2 placeholder
-- **default** — H2 in-memory, no Docker needed
+- **`local`** — Supabase PostgreSQL, Flyway enabled, Redis on localhost, Kafka excluded, Google OAuth2 placeholder
+- **`dev`** — H2 in-memory, no external dependencies needed
 
 ### Start Backend
 
-```bash
-# With Docker (postgres + redis)
+```powershell
+# local profile (Supabase DB)
+$env:DB_PASSWORD="your-supabase-password"
 cd backend
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+./mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 
-# Quick iteration (H2, no Docker)
+# dev profile (H2, no DB needed)
 cd backend
-./mvnw spring-boot:run
+./mvnw.cmd spring-boot:run
 ```
 
 ### Start Frontends
 
 ```bash
-pnpm install        # from repo root
-pnpm dev            # starts all three apps via Turborepo
+npm install        # from repo root
+npm run dev        # starts all three apps via Turborepo
 ```
 
 Frontend env (`.env.local` in each app):
@@ -355,16 +369,18 @@ Ports: customer-web `3000` · tailor-portal `3001` · admin-dashboard `3002` · 
 
 Full details and assignments in `STITCHPLAN.md`.
 
-**Blockers (nothing works without these):**
+**Blockers:**
 - **C1** — `AddressController` missing → booking wizard Step 4 always shows "No addresses"
 - **C2** — `GET /admin/users` missing → admin users page 404s
-- **C4** — `cookie.setSecure(false)` hardcoded → breaks HTTPS auth in production
+- **C3** — `UserResponse` missing `createdAt` field → admin users page crashes
 
 **Security:**
 - **S1** — `/actuator/**` fully public
-- **S4** — `X-Forwarded-For` blindly trusted in rate limiter
+- **S2** — No input sanitization on `specialInstructions`
+- **S3** — `CORS_ORIGINS` uses `System.getenv()` instead of `@Value`
+- **S5** — No CSRF protection on cookie-based auth endpoints
 
 **Other notable:**
-- **C7** — `RateLimitFilter` also rate-limits `/auth/me` and `/auth/refresh`
-- **C6** — Admin cannot freely override order status (hits same sequential validation as tailor)
+- **C5** — Date timezone bug on order detail page
+- **C6** — Admin cannot freely override order status
 - **Q3** — `BOOKED → BOOKED` no-op transition allowed

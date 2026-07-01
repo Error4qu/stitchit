@@ -8,55 +8,55 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 
 ### Critical Bugs
 
-| ID | Issue | Assigned | File |
-|----|-------|----------|------|
-| C1 | Booking wizard Step 4 always shows "No saved addresses" — AddressController missing | Backend Dev | `AlterationOrderController` |
-| C2 | Admin users page 404s — `GET /admin/users` endpoint missing | Backend Dev | `AdminController` |
-| C3 | Admin users page crashes — `UserResponse` has no `createdAt` field but UI renders it | Backend Dev | `UserResponse.java` |
-| C4 | `cookie.setSecure(false)` hardcoded — breaks HTTPS auth in production | Backend Dev | `AuthController.java:95` |
-| C5 | Order date display has timezone bug — `new Date(order.scheduledDate).toLocaleDateString()` interprets UTC as local | Frontend Dev | `alterations/orders/[id]/page.tsx` |
-| C6 | Admin cannot freely override order status — hits same sequential `validateStatusTransition()` as tailor | Backend Dev | `AlterationOrderService.java` |
-| C7 | `RateLimitFilter` rate-limits `/auth/me` and `/auth/refresh` — blocks normal page loads | Backend Dev | `RateLimitFilter.java` |
+| ID | Issue | Assigned | File | Status |
+|----|-------|----------|------|--------|
+| C1 | Booking wizard Step 4 always shows "No saved addresses" — AddressController missing | Backend Dev | `AlterationController.java` | Open |
+| C2 | Admin users page 404s — `GET /admin/users` endpoint missing | Backend Dev | `AdminController` | Open |
+| C3 | Admin users page crashes — `UserResponse` has no `createdAt` field but UI renders it | Backend Dev | `UserResponse.java` | Open |
+| C4 | `cookie.setSecure(false)` hardcoded — breaks HTTPS auth in production | Backend Dev | `CookieUtils.java` | **Fixed** |
+| C5 | Order date display has timezone bug — `new Date(order.scheduledDate).toLocaleDateString()` interprets UTC as local | Frontend Dev | `alterations/orders/[id]/page.tsx` | Open |
+| C6 | Admin cannot freely override order status — hits same sequential `validateStatusTransition()` as tailor | Backend Dev | `AlterationOrderService.java` | Open |
+| C7 | `RateLimitFilter` rate-limited `/auth/me` and `/auth/refresh` — blocked normal page loads | Backend Dev | `RateLimitFilter.java` | **Fixed** |
 
 ### Security Issues
 
-| ID | Issue | Assigned | File |
-|----|-------|----------|------|
-| S1 | `/actuator/**` fully public — exposes heap dumps, env vars, beans | Backend Dev | `SecurityConfig.java` |
-| S2 | No input sanitization on `specialInstructions` field | Backend Dev | `AlterationOrderService.java` |
-| S3 | `CORS_ORIGINS` uses `System.getenv()` instead of `@Value` — silent null on misconfiguration | Backend Dev | `SecurityConfig.java` |
-| S4 | `X-Forwarded-For` blindly trusted in rate limiter — IP spoofable | Backend Dev | `RateLimitFilter.java` |
-| S5 | No CSRF protection on cookie-based auth endpoints | Backend Dev | `SecurityConfig.java` |
+| ID | Issue | Assigned | File | Status |
+|----|-------|----------|------|--------|
+| S1 | `/actuator/**` fully public — exposes heap dumps, env vars, beans | Backend Dev | `SecurityConfig.java` | Open |
+| S2 | No input sanitization on `specialInstructions` field | Backend Dev | `AlterationOrderService.java` | Open |
+| S3 | `CORS_ORIGINS` uses `System.getenv()` instead of `@Value` — silent null on misconfiguration | Backend Dev | `SecurityConfig.java` | Open |
+| S4 | `X-Forwarded-For` blindly trusted in rate limiter — IP spoofable | Backend Dev | `RateLimitFilter.java` | **Fixed** |
+| S5 | No CSRF protection on cookie-based auth endpoints | Backend Dev | `SecurityConfig.java` | Open |
 
 ### Missing Features
 
-| ID | Feature | Assigned |
-|----|---------|----------|
-| M1 | AddressController + AddressService — full CRUD for saved addresses | Backend Dev |
-| M2 | Photo upload — before/after garment photos (S3 or local storage) | Backend Dev |
-| M3 | Payment integration (Razorpay or Stripe) | Backend Dev |
-| M4 | Push/email notifications — booking confirmed, tailor assigned, delivered | Backend Dev |
-| M5 | Tailor assignment UI in admin — currently raw ID input | Frontend Dev |
-| M6 | Pagination in all listing pages — hardcoded size: 50/100/200 | Frontend Dev |
-| M7 | Customer profile page — edit name, phone, manage addresses | Frontend Dev |
-| M8 | Tailor earnings/payout dashboard | Frontend Dev |
-| M9 | Admin analytics — revenue charts, order trends | Frontend Dev |
-| M10 | Search and filter on admin alterations list | Frontend Dev |
+| ID | Feature | Assigned | Status |
+|----|---------|----------|--------|
+| M1 | AddressController + AddressService — full CRUD for saved addresses | Backend Dev | Open |
+| M2 | Photo upload — before/after garment photos (S3 or local storage) | Backend Dev | Open |
+| M3 | Payment integration (Razorpay or Stripe) | Backend Dev | Open |
+| M4 | Push/email notifications — booking confirmed, tailor assigned, delivered | Backend Dev | Open |
+| M5 | Tailor assignment UI in admin — currently raw ID input | Frontend Dev | Open |
+| M6 | Pagination in all listing pages — hardcoded size | Frontend Dev | Open |
+| M7 | Customer profile page — edit name, phone, manage addresses | Frontend Dev | Open |
+| M8 | Tailor earnings/payout dashboard | Frontend Dev | Open |
+| M9 | Admin analytics — revenue charts, order trends | Frontend Dev | Open |
+| M10 | Search and filter on admin alterations list | Frontend Dev | Open |
 
 ### Code Quality
 
-| ID | Issue | Assigned | File |
-|----|-------|----------|------|
-| Q1 | Status colors/labels duplicated across 3 pages — extract to shared constant | Frontend Dev | Multiple |
-| Q2 | `getServicesByCategory()` makes 2 DB calls — combine into one | Backend Dev | `AlterationOrderService.java` |
-| Q3 | `validateStatusTransition()` allows `BOOKED → BOOKED` no-op | Backend Dev | `AlterationOrderService.java:194` |
-| Q4 | All listing pages use hardcoded `size` — no pagination support | Frontend Dev | Multiple |
-| Q5 | Admin revenue calculated client-side from all loaded orders — move to backend | Backend Dev | `admin/alterations/page.tsx` |
-| Q6 | `refetchInterval: 30s` on tailor portal — should be configurable or use WebSocket | Backend Dev | `tailor/alterations/page.tsx` |
-| Q7 | No loading skeletons on order detail page | Frontend Dev | `orders/[id]/page.tsx` |
-| Q8 | Error boundaries missing on all pages | Frontend Dev | All pages |
-| Q9 | No optimistic updates on status change | Frontend Dev | Tailor portal |
-| Q10 | `@stitchit/api-client` has no request timeout configured | Backend Dev | `endpoints.ts` |
+| ID | Issue | Assigned | File | Status |
+|----|-------|----------|------|--------|
+| Q1 | Status colors/labels duplicated across 3 pages — extract to shared constant | Frontend Dev | Multiple | Open |
+| Q2 | `getServicesByCategory()` makes 2 DB calls — combine into one | Backend Dev | `AlterationOrderService.java` | Open |
+| Q3 | `validateStatusTransition()` allows `BOOKED → BOOKED` no-op | Backend Dev | `AlterationOrderService.java` | Open |
+| Q4 | All listing pages use hardcoded `size` — no pagination support | Frontend Dev | Multiple | Open |
+| Q5 | Admin revenue calculated client-side from all loaded orders — move to backend | Backend Dev | `admin/alterations/page.tsx` | Open |
+| Q6 | `refetchInterval: 30s` on tailor portal — should be configurable or use WebSocket | Backend Dev | `tailor/alterations/page.tsx` | Open |
+| Q7 | No loading skeletons on order detail page | Frontend Dev | `orders/[id]/page.tsx` | Open |
+| Q8 | Error boundaries missing on all pages | Frontend Dev | All pages | Open |
+| Q9 | No optimistic updates on status change | Frontend Dev | Tailor portal | Open |
+| Q10 | `@stitchit/api-client` has no request timeout configured | Backend Dev | `endpoints.ts` | Open |
 
 ---
 
@@ -69,29 +69,31 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 | AI3 | Smart tailor assignment — AI scores tailors by skill match, proximity, and current load | Admin assign flow | Backend Dev |
 | AI4 | Alteration price estimator — AI estimates cost range before booking is confirmed | Booking summary step | Backend Dev |
 | AI5 | Customer support chatbot — answers "where is my order", "how long will it take" | Customer app | Frontend Dev |
-| AI6 | Personalized email generation — booking confirmation and delivery emails written by AI | Notification service | Backend Dev |
+| AI6 | Personalised email generation — booking confirmation and delivery emails written by AI | Notification service | Backend Dev |
 | AI7 | Quality check assistant — tailor uploads after photo, AI compares before/after and flags issues | Tailor portal | Backend Dev |
 
 ---
 
-## 4-Week Sprint Plan
+## Sprint Plan
 
 ### Week 1 — Core Fixes + Address API
 
 **Backend Dev**
-- [ ] Fix C4: make `cookie.setSecure()` conditional on `server.ssl.enabled` or env
-- [ ] Fix C7: update `RateLimitFilter.shouldNotFilter()` to only apply to `/auth/login` and `/auth/register`
+- [x] Fix C4: `cookie.setSecure()` now driven by `app.cookie.secure` env property via `CookieUtils`
+- [x] Fix C7: `RateLimitFilter.shouldNotFilter()` now only applies to `/auth/login` and `/auth/register`
+- [x] Fix S4: `X-Forwarded-For` only trusted from IPs listed in `app.rate-limit.trusted-proxies`
 - [ ] Fix Q3: patch `validateStatusTransition()` — remove `BOOKED → BOOKED` no-op case
 - [ ] Fix C6: add admin role bypass in status update — skip sequential validation for `ADMIN`
 - [ ] Fix S1: lock down `/actuator/**` to `ADMIN` role or localhost only
 - [ ] Fix S3: replace `System.getenv()` with `@Value` for CORS origins
 - [ ] Build M1: `AddressController` + `AddressService` — `GET /addresses`, `POST /addresses`, `PUT /addresses/{id}`, `DELETE /addresses/{id}`, `PUT /addresses/{id}/default`
 - [ ] Fix C3: add `createdAt` to `UserResponse` and expose from `AuthService.toUserResponse()`
+- [ ] Build C2: `GET /admin/users` endpoint
 
 **Frontend Dev**
 - [ ] Fix C5: use `new Date(date + 'T00:00:00')` or UTC-aware formatting on all date displays
 - [ ] Fix Q1: extract status color/label map to `packages/types/src/alteration-status.ts`, import everywhere
-- [ ] Add error boundaries on all three apps' root layouts
+- [ ] Add error boundaries on all three apps' root layouts (Q8)
 - [ ] Add loading skeletons to order detail page (Q7)
 
 ---
@@ -99,7 +101,6 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 ### Week 2 — Payments + Notifications
 
 **Backend Dev**
-- [ ] Fix S4: validate `X-Forwarded-For` against a trusted proxy list
 - [ ] Fix S5: enable CSRF protection for cookie-authenticated endpoints
 - [ ] Fix S2: sanitize `specialInstructions` — strip HTML, limit length
 - [ ] Build M3: payment integration — create order → payment intent → webhook to confirm booking
@@ -136,12 +137,12 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 ### Week 4 — Testing + Production Hardening
 
 **Backend Dev**
-- [ ] Write integration tests for `AuthController`, `AlterationOrderController`, `AddressController`
+- [ ] Write integration tests for `AuthController`, `AlterationController`, `AddressController`
 - [ ] Add `@Valid` input validation to all request DTOs (name length, phone format, date range)
 - [ ] Set up rate limiting on payment endpoints separately from auth
-- [ ] Configure production `application-prod.properties` — real secrets via env, Kafka enabled, secure cookies
+- [ ] Configure production `application-prod.properties` — real secrets via env, Kafka enabled
 - [ ] Add Flyway V9 migration: indexes on `alteration_orders(user_id)`, `alteration_orders(tailor_id)`, `alteration_orders(status)`
-- [ ] Set up health check endpoint for load balancer at `/actuator/health` (public, read-only subset only)
+- [ ] Set up health check — expose `/actuator/health` (public, read-only) and lock down the rest
 - [ ] Fix Q10: add `connectTimeout` and `readTimeout` to `ApiEndpoints` HTTP client
 
 **Frontend Dev**
@@ -157,7 +158,7 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 
 ## Definition of Done
 
-- No TypeScript errors (`pnpm typecheck`)
+- No TypeScript errors (`npm run typecheck`)
 - No console errors in browser
 - All API calls handle loading, error, and empty states
 - All new backend endpoints have at least one integration test
