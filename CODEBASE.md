@@ -333,21 +333,53 @@ Auto-refreshes every 30 seconds. Status advance button disabled on DELIVERED.
 
 ### Spring Profiles
 
-- **`local`** — Supabase PostgreSQL, Flyway enabled, Redis on localhost, Kafka excluded, Google OAuth2 placeholder
+- **`local`** — Supabase PostgreSQL, Flyway enabled, Redis on localhost, Kafka excluded
 - **`dev`** — H2 in-memory, no external dependencies needed
+
+### Environment Variables
+
+All secrets are read from environment variables — **never hardcode them in
+properties files or commit them to git**. Set them in the same PowerShell
+window before starting the backend (`$env:` variables live only in that
+window and die when it closes).
+
+| Variable | Required | What it is | Where to get it |
+|----------|----------|------------|-----------------|
+| `DB_PASSWORD` | yes (local profile) | Supabase Postgres password | Supabase dashboard → Settings → Database |
+| `GOOGLE_CLIENT_SECRET` | for Google login | OAuth2 client secret (`GOCSPX-...`) | Google Cloud console → APIs & Services → Credentials |
+| `GOOGLE_CLIENT_ID` | no (default committed) | OAuth2 client id (public) | Same page as the secret |
+| `PAYMENT_PROVIDER` | no (defaults to `mock`) | `mock` = fake payments that auto-succeed; `razorpay` = real gateway | — |
+| `RAZORPAY_KEY_ID` | if provider=razorpay | `rzp_test_...` (test) or `rzp_live_...` | Razorpay dashboard → Settings → API Keys |
+| `RAZORPAY_KEY_SECRET` | if provider=razorpay | Key secret shown once at generation | Same page — regenerate if lost |
+
+Notes:
+- The Google **client id** is public (it appears in every OAuth redirect URL) and is committed as a default in `application-local.properties`. The **secret** is not.
+- Razorpay **test keys** never charge real money. Test card: `4111 1111 1111 1111`, any future expiry/CVV. Test UPI: `success@razorpay`.
+- If a secret ever leaks (committed, pasted publicly), rotate it at the source — Google console / Razorpay dashboard / Supabase settings.
 
 ### Start Backend
 
 ```powershell
-# local profile (Supabase DB)
-$env:DB_PASSWORD="your-supabase-password"
 cd backend
+
+# minimal — mock payments, no Google login
+$env:DB_PASSWORD="<supabase-password>"
+./mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+
+# full — Google login + real Razorpay test-mode payments
+$env:DB_PASSWORD="<supabase-password>"
+$env:GOOGLE_CLIENT_SECRET="GOCSPX-..."
+$env:PAYMENT_PROVIDER="razorpay"
+$env:RAZORPAY_KEY_ID="rzp_test_..."
+$env:RAZORPAY_KEY_SECRET="<razorpay-secret>"
 ./mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 
 # dev profile (H2, no DB needed)
-cd backend
 ./mvnw.cmd spring-boot:run
 ```
+
+The startup log confirms what's active: look for `PAYMENT_PROVIDER=RAZORPAY`
+(or the `PAYMENT_PROVIDER=MOCK` warning) right before `Started StitchItApplication`.
 
 ### Start Frontends
 
@@ -363,24 +395,41 @@ NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 
 Ports: customer-web `3000` · tailor-portal `3001` · admin-dashboard `3002` · backend `8080`
 
+### Dev Accounts (seeded automatically on dev/local startup)
+
+- Admin — `admin@stitchit.com` / `Admin@123`
+- Tailor — `tailor@stitchit.com` / `Tailor@123`
+
 ---
 
-## 14. Known Issues
+## 14. Payments
 
-Full details and assignments in `STITCHPLAN.md`.
+Provider-agnostic gateway behind the `PaymentProvider` strategy interface
+(`backend/src/main/java/com/stitchit/payment/`):
 
-**Blockers:**
-- **C1** — `AddressController` missing → booking wizard Step 4 always shows "No addresses"
-- **C2** — `GET /admin/users` missing → admin users page 404s
-- **C3** — `UserResponse` missing `createdAt` field → admin users page crashes
+- **`MockPaymentProvider`** (default) — no external calls, every payment
+  succeeds. Lets the full booking→paid flow run without any account.
+- **`RazorpayPaymentProvider`** — real Orders API + HMAC-SHA256 signature
+  verification. Selected with `PAYMENT_PROVIDER=razorpay` + key env vars.
 
-**Security:**
-- **S1** — `/actuator/**` fully public
-- **S2** — No input sanitization on `specialInstructions`
-- **S3** — `CORS_ORIGINS` uses `System.getenv()` instead of `@Value`
-- **S5** — No CSRF protection on cookie-based auth endpoints
+Flow: wizard creates order (UNPAID) → `POST /api/v1/payments/checkout`
+creates a `payments` row + gateway order → frontend opens Razorpay modal
+(or mock pay button) → `POST /api/v1/payments/verify` checks the signature
+and flips the order's `payment_status` to PAID. Verify is idempotent and
+ownership-checked; checkout reuses an open payment row on retry.
 
-**Other notable:**
-- **C5** — Date timezone bug on order detail page
-- **C6** — Admin cannot freely override order status
-- **Q3** — `BOOKED → BOOKED` no-op transition allowed
+**Known gap:** no webhook handler yet — if a user pays and closes the tab
+before verify fires, the order stays UNPAID (money captured on gateway).
+Razorpay `payment.captured` webhook is the planned fix before go-live.
+
+---
+
+## 15. Known Issues
+
+Full details and assignments in `STITCHPLAN.md`. All Week-1 backend issues
+(C1–C4, C6, C7, S1–S5, Q2, Q3, Q10, M1, M3) are fixed as of July 2026.
+
+**Still open:**
+- **C5** — Date timezone bug on order detail page (frontend)
+- **Q1/Q4–Q9** — frontend code-quality items (shared status map, pagination, skeletons, error boundaries)
+- Payments webhook (see section 14)
