@@ -14,7 +14,7 @@ export interface User {
 
 export interface Address {
   id: string;
-  userId: string;
+  userId?: string;
   street: string;
   city: string;
   state: string;
@@ -51,6 +51,19 @@ export type SlotTime =
   | 'AFTERNOON_12_2'
   | 'AFTERNOON_3_5'
   | 'EVENING_6_8';
+
+// ─── Payments ────────────────────────────────────────────────────────────────
+export type OrderPaymentStatus = 'UNPAID' | 'PAID';
+
+export interface PaymentCheckout {
+  paymentId: number;
+  alterationOrderId: number;
+  provider: 'RAZORPAY' | 'MOCK';
+  providerOrderId: string;
+  keyId: string;
+  amount: number;
+  currency: string;
+}
 
 export interface AlterationCategory {
   id: number;
@@ -94,6 +107,7 @@ export interface AlterationOrder {
   scheduledSlot: SlotTime;
   scheduledSlotDisplay: string;
   status: AlterationStatus;
+  paymentStatus: OrderPaymentStatus;
   items: AlterationOrderItem[];
   tailorNotes?: string;
   specialInstructions?: string;

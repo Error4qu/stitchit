@@ -5,6 +5,7 @@ import type {
   AlterationCategory,
   AlterationService,
   AlterationOrder,
+  PaymentCheckout,
 } from '@stitchit/types';
 import { ApiClient } from './api-client';
 
@@ -51,11 +52,28 @@ export class ApiEndpoints {
   }
 
   updateAddress(id: string, data: Partial<Address>) {
-    return this.client.patch<Address>(`/addresses/${id}`, data);
+    return this.client.put<Address>(`/addresses/${id}`, data);
+  }
+
+  setDefaultAddress(id: string) {
+    return this.client.put<Address>(`/addresses/${id}/default`);
   }
 
   deleteAddress(id: string) {
     return this.client.delete<void>(`/addresses/${id}`);
+  }
+
+  // ─── Payments ────────────────────────────────────────────────────────
+  createPaymentCheckout(alterationOrderId: number) {
+    return this.client.post<PaymentCheckout>('/payments/checkout', { alterationOrderId });
+  }
+
+  verifyPayment(data: {
+    providerOrderId: string;
+    providerPaymentId: string;
+    signature: string;
+  }) {
+    return this.client.post<PaymentCheckout>('/payments/verify', data);
   }
 
   // ─── Admin ───────────────────────────────────────────────────────────

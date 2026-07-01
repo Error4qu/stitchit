@@ -20,6 +20,7 @@ export class ApiClient {
       ...options,
       headers,
       credentials: 'include',
+      signal: options.signal ?? AbortSignal.timeout(15000),
     });
 
     if (response.status === 204) {

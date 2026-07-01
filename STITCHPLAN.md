@@ -34,7 +34,7 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 |----|---------|----------|--------|
 | M1 | AddressController + AddressService — full CRUD for saved addresses | Backend Dev | **Done** |
 | M2 | Photo upload — before/after garment photos (S3 or local storage) | Backend Dev | Open |
-| M3 | Payment integration (Razorpay or Stripe) | Backend Dev | Open |
+| M3 | Payment integration (Razorpay or Stripe) | Backend Dev | **Done** — Razorpay + mock provider, checkout/verify API, wizard payment step |
 | M4 | Push/email notifications — booking confirmed, tailor assigned, delivered | Backend Dev | Open |
 | M5 | Tailor assignment UI in admin — currently raw ID input | Frontend Dev | Open |
 | M6 | Pagination in all listing pages — hardcoded size | Frontend Dev | Open |
@@ -56,7 +56,7 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 | Q7 | No loading skeletons on order detail page | Frontend Dev | `orders/[id]/page.tsx` | Open |
 | Q8 | Error boundaries missing on all pages | Frontend Dev | All pages | Open |
 | Q9 | No optimistic updates on status change | Frontend Dev | Tailor portal | Open |
-| Q10 | `@stitchit/api-client` has no request timeout configured | Backend Dev | `endpoints.ts` | Open |
+| Q10 | `@stitchit/api-client` has no request timeout configured | Backend Dev | `endpoints.ts` | **Fixed** — 15s AbortSignal timeout |
 
 ---
 

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -242,10 +243,13 @@ public class AlterationOrderService {
         resp.setScheduledSlot(order.getScheduledSlot());
         resp.setScheduledSlotDisplay(order.getScheduledSlot().getDisplayName());
         resp.setStatus(order.getStatus());
+        resp.setPaymentStatus(order.getPaymentStatus());
         resp.setTailorNotes(order.getTailorNotes());
         resp.setSpecialInstructions(order.getSpecialInstructions());
-        resp.setBeforePhotos(order.getBeforePhotos());
-        resp.setAfterPhotos(order.getAfterPhotos());
+        // Copy lazy collections inside the transaction — the DTO must not hold
+        // Hibernate proxies once the session is closed (OSIV is off)
+        resp.setBeforePhotos(new ArrayList<>(order.getBeforePhotos()));
+        resp.setAfterPhotos(new ArrayList<>(order.getAfterPhotos()));
         resp.setTotalPrice(order.getTotalPrice());
         resp.setCreatedAt(order.getCreatedAt());
         resp.setUpdatedAt(order.getUpdatedAt());

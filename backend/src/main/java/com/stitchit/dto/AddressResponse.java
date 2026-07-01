@@ -1,5 +1,7 @@
 package com.stitchit.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class AddressResponse {
     private Long id;
     private String street;
@@ -29,6 +31,9 @@ public class AddressResponse {
     public void setLatitude(Double latitude) { this.latitude = latitude; }
     public Double getLongitude() { return longitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
+    // Without the explicit name Jackson serializes isDefault() as "default",
+    // which the frontends do not recognise
+    @JsonProperty("isDefault")
     public boolean isDefault() { return isDefault; }
     public void setDefault(boolean aDefault) { isDefault = aDefault; }
 }

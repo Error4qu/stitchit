@@ -38,6 +38,10 @@ public class AlterationOrder {
     @Column(nullable = false)
     private AlterationStatus status = AlterationStatus.BOOKED;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 20)
+    private OrderPaymentStatus paymentStatus = OrderPaymentStatus.UNPAID;
+
     @OneToMany(mappedBy = "alterationOrder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<AlterationOrderItem> items = new ArrayList<>();
 
@@ -97,6 +101,8 @@ public class AlterationOrder {
     public void setScheduledSlot(SlotTime scheduledSlot) { this.scheduledSlot = scheduledSlot; }
     public AlterationStatus getStatus() { return status; }
     public void setStatus(AlterationStatus status) { this.status = status; }
+    public OrderPaymentStatus getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(OrderPaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
     public List<AlterationOrderItem> getItems() { return items; }
     public void setItems(List<AlterationOrderItem> items) { this.items = items; }
     public String getTailorNotes() { return tailorNotes; }

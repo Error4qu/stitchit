@@ -1,6 +1,7 @@
 package com.stitchit.dto;
 
 import com.stitchit.entity.AlterationStatus;
+import com.stitchit.entity.OrderPaymentStatus;
 import com.stitchit.entity.SlotTime;
 
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ public class AlterationOrderResponse {
     private SlotTime scheduledSlot;
     private String scheduledSlotDisplay;
     private AlterationStatus status;
+    private OrderPaymentStatus paymentStatus;
     private List<AlterationOrderItemResponse> items;
     private String tailorNotes;
     private String specialInstructions;
@@ -48,6 +50,8 @@ public class AlterationOrderResponse {
     public void setScheduledSlotDisplay(String scheduledSlotDisplay) { this.scheduledSlotDisplay = scheduledSlotDisplay; }
     public AlterationStatus getStatus() { return status; }
     public void setStatus(AlterationStatus status) { this.status = status; }
+    public OrderPaymentStatus getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(OrderPaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
     public List<AlterationOrderItemResponse> getItems() { return items; }
     public void setItems(List<AlterationOrderItemResponse> items) { this.items = items; }
     public String getTailorNotes() { return tailorNotes; }

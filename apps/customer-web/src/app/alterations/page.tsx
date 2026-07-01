@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Check, ChevronRight, ChevronLeft, Scissors, Calendar, MapPin,
-  Clock, Plus, Minus, FileText, Loader2, CheckCircle, Tag,
+  Clock, Plus, Minus, FileText, Loader2, CheckCircle, Tag, CreditCard,
 } from 'lucide-react';
 import { apiClient, ApiEndpoints, ApiRequestError } from '@stitchit/api-client';
-import type { AlterationCategory, AlterationService, Address, SlotTime } from '@stitchit/types';
+import type {
+  AlterationCategory, AlterationService, AlterationOrder, Address,
+  SlotTime, PaymentCheckout,
+} from '@stitchit/types';
 import { useToast } from '@stitchit/ui';
 import { useAuthStore } from '../../store/auth-store';
 import { ProtectedRoute } from '../../components/protected-route';
@@ -45,6 +48,7 @@ const STEPS = [
   'Schedule',
   'Address',
   'Summary',
+  'Payment',
   'Confirmation',
 ];
 
@@ -57,7 +61,7 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
 function StepBar({ current }: { current: number }) {
   return (
     <div className="flex items-center justify-center gap-0">
-      {STEPS.slice(0, 6).map((label, i) => (
+      {STEPS.slice(0, 7).map((label, i) => (
         <React.Fragment key={label}>
           <div className="flex flex-col items-center">
             <div
@@ -77,8 +81,8 @@ function StepBar({ current }: { current: number }) {
               {label}
             </span>
           </div>
-          {i < 5 && (
-            <div className={`h-0.5 w-8 sm:w-12 mb-5 transition-colors duration-300 ${
+          {i < 6 && (
+            <div className={`h-0.5 w-6 sm:w-10 mb-5 transition-colors duration-300 ${
               i < current ? 'bg-[#C9A84C]' : 'bg-[#0F1B2D]/10 dark:bg-[#F8F5F0]/10'
             }`} />
           )}
@@ -331,6 +335,8 @@ function StepSchedule({
 }
 
 // ─── Step 5: Address ──────────────────────────────────────────────────────────
+const EMPTY_ADDRESS_FORM = { street: '', city: '', state: '', postalCode: '', country: 'India' };
+
 function StepAddress({
   addresses,
   selectedId,
@@ -340,17 +346,39 @@ function StepAddress({
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) {
-  if (addresses.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <MapPin className="w-12 h-12 text-[#2D2D2D]/20 dark:text-[#F8F5F0]/20 mx-auto mb-3" />
-        <p className="font-semibold text-[#2D2D2D] dark:text-[#F8F5F0]">No saved addresses</p>
-        <p className="text-sm text-[#2D2D2D]/60 dark:text-[#F8F5F0]/60 mt-1">
-          Please add an address in your profile before booking.
-        </p>
-      </div>
-    );
-  }
+  const queryClient = useQueryClient();
+  const { toast, error } = useToast();
+  const [showForm, setShowForm] = useState(addresses.length === 0);
+  const [form, setForm] = useState(EMPTY_ADDRESS_FORM);
+
+  const createAddressMutation = useMutation({
+    mutationFn: () =>
+      endpoints.createAddress({ ...form, isDefault: addresses.length === 0 }),
+    onSuccess: async (addr) => {
+      await queryClient.invalidateQueries({ queryKey: ['addresses'] });
+      onSelect(Number(addr.id));
+      setShowForm(false);
+      setForm(EMPTY_ADDRESS_FORM);
+      toast('Address saved', 'success');
+    },
+    onError: (err) => {
+      if (err instanceof ApiRequestError) error(err.error.message);
+      else error('Failed to save address. Please try again.');
+    },
+  });
+
+  const formValid =
+    form.street.trim() && form.city.trim() && form.state.trim() &&
+    form.postalCode.trim() && form.country.trim();
+
+  const setField = (field: keyof typeof EMPTY_ADDRESS_FORM) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const inputClass =
+    'mt-1 w-full rounded-xl border border-[#0F1B2D]/20 dark:border-[#F8F5F0]/20 bg-transparent px-3 py-2 text-sm text-[#2D2D2D] dark:text-[#F8F5F0] placeholder:text-[#2D2D2D]/30 dark:placeholder:text-[#F8F5F0]/30 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/50 transition';
+  const labelClass =
+    'text-xs font-semibold text-[#2D2D2D]/70 dark:text-[#F8F5F0]/70 uppercase tracking-wider';
 
   return (
     <div>
@@ -395,6 +423,71 @@ function StepAddress({
             </div>
           </button>
         ))}
+
+        {showForm ? (
+          <div className="p-4 rounded-2xl border-2 border-[#C9A84C]/40 space-y-3">
+            <p className="text-sm font-semibold text-[#2D2D2D] dark:text-[#F8F5F0] flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-[#C9A84C]" /> New address
+            </p>
+            <div>
+              <label className={labelClass}>Street</label>
+              <input type="text" placeholder="House no, street, area" value={form.street}
+                     onChange={setField('street')} className={inputClass} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>City</label>
+                <input type="text" placeholder="City" value={form.city}
+                       onChange={setField('city')} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>State</label>
+                <input type="text" placeholder="State" value={form.state}
+                       onChange={setField('state')} className={inputClass} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Postal code</label>
+                <input type="text" placeholder="e.g. 560001" value={form.postalCode}
+                       onChange={setField('postalCode')} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Country</label>
+                <input type="text" value={form.country}
+                       onChange={setField('country')} className={inputClass} />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => createAddressMutation.mutate()}
+                disabled={!formValid || createAddressMutation.isPending}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F1B2D] dark:bg-[#C9A84C] text-[#F8F5F0] dark:text-[#0F1B2D] text-sm font-semibold hover:bg-[#C9A84C] hover:text-[#0F1B2D] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {createAddressMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                ) : (
+                  <><Check className="w-4 h-4" /> Save address</>
+                )}
+              </button>
+              {addresses.length > 0 && (
+                <button
+                  onClick={() => setShowForm(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-[#2D2D2D]/60 dark:text-[#F8F5F0]/60 hover:bg-[#0F1B2D]/5 dark:hover:bg-[#F8F5F0]/5 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowForm(true)}
+            className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl border-2 border-dashed border-[#0F1B2D]/20 dark:border-[#F8F5F0]/20 text-sm font-medium text-[#2D2D2D]/60 dark:text-[#F8F5F0]/60 hover:border-[#C9A84C]/60 hover:text-[#C9A84C] transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add new address
+          </button>
+        )}
       </div>
     </div>
   );
@@ -504,8 +597,134 @@ function SummaryRow({ label, value, icon }: { label: string; value: string; icon
   );
 }
 
-// ─── Step 7: Confirmation ────────────────────────────────────────────────────
-function StepConfirmation({ orderId }: { orderId: number }) {
+// ─── Step 7: Payment ──────────────────────────────────────────────────────────
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if ((window as unknown as { Razorpay?: unknown }).Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+function StepPayment({ order, onPaid }: { order: AlterationOrder; onPaid: () => void }) {
+  const router = useRouter();
+  const { toast, error } = useToast();
+  const [checkout, setCheckout] = useState<PaymentCheckout | null>(null);
+  const [paying, setPaying] = useState(false);
+
+  useEffect(() => {
+    endpoints
+      .createPaymentCheckout(order.id)
+      .then(setCheckout)
+      .catch(() => error('Could not start payment. You can pay later from My Orders.'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id]);
+
+  const completeVerification = async (
+    providerOrderId: string,
+    providerPaymentId: string,
+    signature: string
+  ) => {
+    try {
+      await endpoints.verifyPayment({ providerOrderId, providerPaymentId, signature });
+      toast('Payment successful!', 'success');
+      onPaid();
+    } catch (err) {
+      if (err instanceof ApiRequestError) error(err.error.message);
+      else error('Payment verification failed. Contact support if the amount was deducted.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handlePay = async () => {
+    if (!checkout) return;
+    setPaying(true);
+
+    if (checkout.provider === 'MOCK') {
+      await completeVerification(checkout.providerOrderId, `mock_pay_${Date.now()}`, 'mock');
+      return;
+    }
+
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      error('Could not load the payment gateway. Check your connection and retry.');
+      setPaying(false);
+      return;
+    }
+    type RazorpayResponse = {
+      razorpay_order_id: string;
+      razorpay_payment_id: string;
+      razorpay_signature: string;
+    };
+    const RazorpayCtor = (window as unknown as {
+      Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+    }).Razorpay;
+    const rzp = new RazorpayCtor({
+      key: checkout.keyId,
+      amount: Math.round(checkout.amount * 100),
+      currency: checkout.currency,
+      name: 'StitchIt',
+      description: `Alteration order #${order.id}`,
+      order_id: checkout.providerOrderId,
+      handler: (resp: RazorpayResponse) =>
+        completeVerification(resp.razorpay_order_id, resp.razorpay_payment_id, resp.razorpay_signature),
+      modal: { ondismiss: () => setPaying(false) },
+      theme: { color: '#C9A84C' },
+    });
+    rzp.open();
+  };
+
+  return (
+    <div className="text-center py-4">
+      <div className="w-16 h-16 rounded-full bg-[#C9A84C]/15 flex items-center justify-center mx-auto mb-5">
+        <CreditCard className="w-8 h-8 text-[#C9A84C]" />
+      </div>
+      <h2 className="font-serif text-2xl font-bold text-[#0F1B2D] dark:text-[#F8F5F0] mb-2">
+        Complete your payment
+      </h2>
+      <p className="text-sm text-[#2D2D2D]/60 dark:text-[#F8F5F0]/60 mb-6">
+        Order #{order.id} is reserved. Pay now to confirm your booking.
+      </p>
+      <div className="max-w-xs mx-auto p-4 rounded-2xl bg-[#0F1B2D]/5 dark:bg-[#F8F5F0]/5 mb-6">
+        <div className="flex justify-between text-sm mb-1">
+          <span className="text-[#2D2D2D]/60 dark:text-[#F8F5F0]/60">Amount due</span>
+          <span className="font-bold text-[#C9A84C] text-lg">₹{order.totalPrice}</span>
+        </div>
+        {checkout?.provider === 'MOCK' && (
+          <p className="text-[11px] text-[#2D2D2D]/40 dark:text-[#F8F5F0]/40 mt-1">
+            Test mode — no real money is charged
+          </p>
+        )}
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <button
+          onClick={handlePay}
+          disabled={!checkout || paying}
+          className="flex items-center justify-center gap-2 px-8 py-2.5 rounded-xl bg-[#0F1B2D] dark:bg-[#C9A84C] text-[#F8F5F0] dark:text-[#0F1B2D] text-sm font-semibold hover:bg-[#C9A84C] hover:text-[#0F1B2D] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {paying ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
+          ) : (
+            <>Pay ₹{order.totalPrice}{checkout?.provider === 'MOCK' ? ' (Test)' : ''}</>
+          )}
+        </button>
+        <button
+          onClick={() => router.push('/alterations/orders')}
+          className="px-6 py-2.5 rounded-xl border border-[#0F1B2D]/20 dark:border-[#F8F5F0]/20 text-sm font-semibold text-[#2D2D2D] dark:text-[#F8F5F0] hover:bg-[#0F1B2D]/5 dark:hover:bg-[#F8F5F0]/5 transition-colors"
+        >
+          Pay Later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 8: Confirmation ────────────────────────────────────────────────────
+function StepConfirmation({ orderId, paid }: { orderId: number; paid: boolean }) {
   const router = useRouter();
   return (
     <div className="text-center py-4">
@@ -521,7 +740,8 @@ function StepConfirmation({ orderId }: { orderId: number }) {
         Booking confirmed!
       </h2>
       <p className="text-sm text-[#2D2D2D]/60 dark:text-[#F8F5F0]/60 mb-1">
-        Your alteration order #{orderId} has been placed.
+        Your alteration order #{orderId} has been placed
+        {paid ? ' and paid' : ''}.
       </p>
       <p className="text-sm text-[#2D2D2D]/60 dark:text-[#F8F5F0]/60 mb-8">
         Our tailor will visit you at the scheduled time to collect your garments.
@@ -548,7 +768,8 @@ function StepConfirmation({ orderId }: { orderId: number }) {
 function AlterationsContent() {
   const { toast, error } = useToast();
   const [step, setStep] = useState(0);
-  const [confirmedOrderId, setConfirmedOrderId] = useState<number | null>(null);
+  const [confirmedOrder, setConfirmedOrder] = useState<AlterationOrder | null>(null);
+  const [paid, setPaid] = useState(false);
   const [booking, setBooking] = useState<BookingState>({
     categoryId: null,
     selectedServices: [],
@@ -591,9 +812,9 @@ function AlterationsContent() {
         specialInstructions: booking.specialInstructions || undefined,
       }),
     onSuccess: (order) => {
-      setConfirmedOrderId(order.id);
+      setConfirmedOrder(order);
       setStep(6);
-      toast('Alteration order placed!', 'success');
+      toast('Order created — complete payment to confirm', 'success');
     },
     onError: (err) => {
       if (err instanceof ApiRequestError) {
@@ -717,7 +938,17 @@ function AlterationsContent() {
           />
         );
       case 6:
-        return <StepConfirmation orderId={confirmedOrderId!} />;
+        return confirmedOrder ? (
+          <StepPayment
+            order={confirmedOrder}
+            onPaid={() => {
+              setPaid(true);
+              setStep(7);
+            }}
+          />
+        ) : null;
+      case 7:
+        return <StepConfirmation orderId={confirmedOrder!.id} paid={paid} />;
       default:
         return null;
     }
@@ -740,7 +971,7 @@ function AlterationsContent() {
         </div>
 
         {/* Step Bar */}
-        {step < 6 && (
+        {step < 7 && (
           <div className="mb-8">
             <StepBar current={step} />
           </div>

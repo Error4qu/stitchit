@@ -100,6 +100,15 @@ function OrderDetailContent() {
           <div className="text-right">
             <p className="text-xl font-bold text-[#C9A84C]">₹{order.totalPrice}</p>
             <p className="text-xs text-[#2D2D2D]/40 dark:text-[#F8F5F0]/40">Total</p>
+            <span
+              className={`inline-block mt-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                order.paymentStatus === 'PAID'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+              }`}
+            >
+              {order.paymentStatus === 'PAID' ? 'Paid' : 'Payment pending'}
+            </span>
           </div>
         </div>
 
