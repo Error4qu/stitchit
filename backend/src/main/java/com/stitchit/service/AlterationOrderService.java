@@ -1,8 +1,11 @@
 package com.stitchit.service;
 
+import com.stitchit.config.CacheConfig;
 import com.stitchit.dto.*;
 import com.stitchit.entity.*;
 import com.stitchit.repository.*;
+import com.stitchit.util.InputSanitizer;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +39,8 @@ public class AlterationOrderService {
         this.addressRepository = addressRepository;
     }
 
+    @Cacheable(CacheConfig.CATEGORIES_CACHE)
+    @Transactional(readOnly = true)
     public List<AlterationCategoryResponse> getAllCategories() {
         return categoryRepository.findAllByOrderBySortOrderAsc().stream()
                 .map(cat -> new AlterationCategoryResponse(
@@ -46,12 +51,19 @@ public class AlterationOrderService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = CacheConfig.SERVICES_CACHE, key = "#categoryId")
+    @Transactional(readOnly = true)
     public List<AlterationServiceResponse> getServicesByCategory(Long categoryId) {
-        AlterationCategory category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException(
-                        "Category not found with id: " + categoryId));
-        return serviceRepository.findByCategoryId(categoryId).stream()
-                .map(svc -> toServiceResponse(svc))
+        // Single JOIN FETCH query covers the common case; only an empty result
+        // needs the extra existence check to distinguish 404 from empty category
+        List<com.stitchit.entity.AlterationService> services =
+                serviceRepository.findByCategoryIdWithCategory(categoryId);
+        if (services.isEmpty() && !categoryRepository.existsById(categoryId)) {
+            throw new jakarta.persistence.EntityNotFoundException(
+                    "Category not found with id: " + categoryId);
+        }
+        return services.stream()
+                .map(this::toServiceResponse)
                 .collect(Collectors.toList());
     }
 
@@ -72,7 +84,7 @@ public class AlterationOrderService {
         order.setAddress(address);
         order.setScheduledDate(request.getScheduledDate());
         order.setScheduledSlot(request.getScheduledSlot());
-        order.setSpecialInstructions(request.getSpecialInstructions());
+        order.setSpecialInstructions(InputSanitizer.sanitize(request.getSpecialInstructions()));
         order.setStatus(AlterationStatus.BOOKED);
 
         BigDecimal total = BigDecimal.ZERO;
@@ -84,8 +96,8 @@ public class AlterationOrderService {
             AlterationOrderItem item = new AlterationOrderItem();
             item.setAlterationOrder(order);
             item.setAlterationService(svc);
-            item.setGarmentDescription(itemReq.getGarmentDescription());
-            item.setCustomerNotes(itemReq.getCustomerNotes());
+            item.setGarmentDescription(InputSanitizer.sanitize(itemReq.getGarmentDescription()));
+            item.setCustomerNotes(InputSanitizer.sanitize(itemReq.getCustomerNotes()));
             item.setPrice(svc.getBasePrice());
             total = total.add(svc.getBasePrice());
             order.getItems().add(item);
@@ -96,6 +108,7 @@ public class AlterationOrderService {
         return toOrderResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public Page<AlterationOrderResponse> getCustomerOrders(String customerEmail, int page, int size) {
         User customer = userRepository.findByEmail(customerEmail)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Customer not found"));
@@ -104,6 +117,7 @@ public class AlterationOrderService {
                 .map(this::toOrderResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<AlterationOrderResponse> getTailorOrders(String tailorEmail, int page, int size) {
         User tailor = userRepository.findByEmail(tailorEmail)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Tailor not found"));
@@ -112,11 +126,13 @@ public class AlterationOrderService {
                 .map(this::toOrderResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<AlterationOrderResponse> getAllOrders(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return orderRepository.findAll(pageable).map(this::toOrderResponse);
+        Pageable pageable = PageRequest.of(page, size);
+        return orderRepository.findAllByOrderByCreatedAtDesc(pageable).map(this::toOrderResponse);
     }
 
+    @Transactional(readOnly = true)
     public AlterationOrderResponse getOrderById(Long orderId, String userEmail) {
         AlterationOrder order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException(
@@ -153,7 +169,7 @@ public class AlterationOrderService {
         order.setStatus(request.getStatus());
 
         if (request.getTailorNotes() != null) {
-            order.setTailorNotes(request.getTailorNotes());
+            order.setTailorNotes(InputSanitizer.sanitize(request.getTailorNotes()));
         }
 
         return toOrderResponse(orderRepository.save(order));

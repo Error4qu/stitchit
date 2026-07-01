@@ -3,6 +3,7 @@ package com.stitchit.config;
 import com.stitchit.security.JwtAuthenticationFilter;
 import com.stitchit.security.OAuth2AuthenticationSuccessHandler;
 import com.stitchit.security.OAuth2UserService;
+import com.stitchit.security.OriginValidationFilter;
 import com.stitchit.security.RateLimitFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -33,17 +34,20 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
     private final RateLimitFilter rateLimitFilter;
+    private final OriginValidationFilter originValidationFilter;
     private final OAuth2UserService oAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter,
                           AuthenticationProvider authenticationProvider,
                           RateLimitFilter rateLimitFilter,
+                          OriginValidationFilter originValidationFilter,
                           OAuth2UserService oAuth2UserService,
                           OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.authenticationProvider = authenticationProvider;
         this.rateLimitFilter = rateLimitFilter;
+        this.originValidationFilter = originValidationFilter;
         this.oAuth2UserService = oAuth2UserService;
         this.oAuth2SuccessHandler = oAuth2SuccessHandler;
     }
@@ -88,6 +92,7 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authenticationProvider(authenticationProvider)
+            .addFilterBefore(originValidationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -10,9 +10,9 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 
 | ID | Issue | Assigned | File | Status |
 |----|-------|----------|------|--------|
-| C1 | Booking wizard Step 4 always shows "No saved addresses" — AddressController missing | Backend Dev | `AlterationController.java` | Open |
-| C2 | Admin users page 404s — `GET /admin/users` endpoint missing | Backend Dev | `AdminController` | Open |
-| C3 | Admin users page crashes — `UserResponse` has no `createdAt` field but UI renders it | Backend Dev | `UserResponse.java` | Open |
+| C1 | Booking wizard Step 4 always shows "No saved addresses" — AddressController missing | Backend Dev | `AlterationController.java` | **Fixed** |
+| C2 | Admin users page 404s — `GET /admin/users` endpoint missing | Backend Dev | `AdminController` | **Fixed** |
+| C3 | Admin users page crashes — `UserResponse` has no `createdAt` field but UI renders it | Backend Dev | `UserResponse.java` | **Fixed** |
 | C4 | `cookie.setSecure(false)` hardcoded — breaks HTTPS auth in production | Backend Dev | `CookieUtils.java` | **Fixed** |
 | C5 | Order date display has timezone bug — `new Date(order.scheduledDate).toLocaleDateString()` interprets UTC as local | Frontend Dev | `alterations/orders/[id]/page.tsx` | Open |
 | C6 | Admin cannot freely override order status — hits same sequential `validateStatusTransition()` as tailor | Backend Dev | `AlterationOrderService.java` | **Fixed** |
@@ -23,16 +23,16 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 | ID | Issue | Assigned | File | Status |
 |----|-------|----------|------|--------|
 | S1 | `/actuator/**` fully public — exposes heap dumps, env vars, beans | Backend Dev | `SecurityConfig.java` | **Fixed** |
-| S2 | No input sanitization on `specialInstructions` field | Backend Dev | `AlterationOrderService.java` | Open |
+| S2 | No input sanitization on `specialInstructions` field | Backend Dev | `AlterationOrderService.java` | **Fixed** |
 | S3 | `CORS_ORIGINS` uses `System.getenv()` instead of `@Value` — silent null on misconfiguration | Backend Dev | `SecurityConfig.java` | **Fixed** |
 | S4 | `X-Forwarded-For` blindly trusted in rate limiter — IP spoofable | Backend Dev | `RateLimitFilter.java` | **Fixed** |
-| S5 | No CSRF protection on cookie-based auth endpoints | Backend Dev | `SecurityConfig.java` | Open |
+| S5 | No CSRF protection on cookie-based auth endpoints | Backend Dev | `OriginValidationFilter.java` | **Fixed** |
 
 ### Missing Features
 
 | ID | Feature | Assigned | Status |
 |----|---------|----------|--------|
-| M1 | AddressController + AddressService — full CRUD for saved addresses | Backend Dev | Open |
+| M1 | AddressController + AddressService — full CRUD for saved addresses | Backend Dev | **Done** |
 | M2 | Photo upload — before/after garment photos (S3 or local storage) | Backend Dev | Open |
 | M3 | Payment integration (Razorpay or Stripe) | Backend Dev | Open |
 | M4 | Push/email notifications — booking confirmed, tailor assigned, delivered | Backend Dev | Open |
@@ -48,10 +48,10 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 | ID | Issue | Assigned | File | Status |
 |----|-------|----------|------|--------|
 | Q1 | Status colors/labels duplicated across 3 pages — extract to shared constant | Frontend Dev | Multiple | Open |
-| Q2 | `getServicesByCategory()` makes 2 DB calls — combine into one | Backend Dev | `AlterationOrderService.java` | Open |
+| Q2 | `getServicesByCategory()` makes 2 DB calls — combine into one | Backend Dev | `AlterationOrderService.java` | **Fixed** |
 | Q3 | `validateStatusTransition()` allows `BOOKED → BOOKED` no-op | Backend Dev | `AlterationOrderService.java` | **Fixed** |
 | Q4 | All listing pages use hardcoded `size` — no pagination support | Frontend Dev | Multiple | Open |
-| Q5 | Admin revenue calculated client-side from all loaded orders — move to backend | Backend Dev | `admin/alterations/page.tsx` | Open |
+| Q5 | Admin revenue calculated client-side from all loaded orders — move to backend | Backend Dev | `admin/alterations/page.tsx` | **Backend done** — `GET /admin/alterations/revenue-summary`; frontend must switch to it |
 | Q6 | `refetchInterval: 30s` on tailor portal — should be configurable or use WebSocket | Backend Dev | `tailor/alterations/page.tsx` | Open |
 | Q7 | No loading skeletons on order detail page | Frontend Dev | `orders/[id]/page.tsx` | Open |
 | Q8 | Error boundaries missing on all pages | Frontend Dev | All pages | Open |

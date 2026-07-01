@@ -60,6 +60,11 @@ public class AlterationOrder {
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
+    // Optimistic lock — concurrent status updates fail with 409 instead of silently overwriting
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -104,6 +109,8 @@ public class AlterationOrder {
     public void setAfterPhotos(List<String> afterPhotos) { this.afterPhotos = afterPhotos; }
     public BigDecimal getTotalPrice() { return totalPrice; }
     public void setTotalPrice(BigDecimal totalPrice) { this.totalPrice = totalPrice; }
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

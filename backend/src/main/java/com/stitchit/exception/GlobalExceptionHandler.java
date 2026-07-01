@@ -5,6 +5,8 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -70,10 +72,27 @@ public class GlobalExceptionHandler {
             .body(new ApiResponse<>(false, "Access denied", null));
     }
 
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(OptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(new ApiResponse<>(false,
+                "This order was updated by someone else — refresh and try again", null));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("DATA_INTEGRITY_VIOLATION: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(new ApiResponse<>(false,
+                "The request conflicts with existing data", null));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex) {
+        // Log the full stack trace server-side but never leak internals to the client
+        log.error("UNHANDLED_EXCEPTION", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(new ApiResponse<>(false, "An unexpected error occurred: " + ex.getMessage(), null));
+            .body(new ApiResponse<>(false, "An unexpected error occurred", null));
     }
 
     private String clientIp(HttpServletRequest request) {

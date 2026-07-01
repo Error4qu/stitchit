@@ -2,12 +2,15 @@ package com.stitchit.dto;
 
 import com.stitchit.entity.Role;
 
+import java.time.LocalDateTime;
+
 public class UserResponse {
     private Long id;
     private String name;
     private String email;
     private String phone;
     private Role role;
+    private LocalDateTime createdAt;
 
     public UserResponse() {}
 
@@ -17,6 +20,12 @@ public class UserResponse {
         this.email = email;
         this.phone = phone;
         this.role = role;
+    }
+
+    public UserResponse(Long id, String name, String email, String phone, Role role,
+                        LocalDateTime createdAt) {
+        this(id, name, email, phone, role);
+        this.createdAt = createdAt;
     }
 
     public Long getId() { return id; }
@@ -29,4 +38,6 @@ public class UserResponse {
     public void setPhone(String phone) { this.phone = phone; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

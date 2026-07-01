@@ -6,6 +6,7 @@ import com.stitchit.entity.User;
 import com.stitchit.repository.UserRepository;
 import com.stitchit.security.JwtService;
 import com.stitchit.security.UserPrincipal;
+import com.stitchit.util.InputSanitizer;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -47,7 +48,7 @@ public class AuthService {
         }
 
         User user = new User();
-        user.setName(request.getName());
+        user.setName(InputSanitizer.sanitize(request.getName()));
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setPhone(request.getPhone());
@@ -145,6 +146,6 @@ public class AuthService {
 
     private UserResponse toUserResponse(User user) {
         return new UserResponse(user.getId(), user.getName(), user.getEmail(),
-                user.getPhone(), user.getRole());
+                user.getPhone(), user.getRole(), user.getCreatedAt());
     }
 }
