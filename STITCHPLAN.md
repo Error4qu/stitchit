@@ -86,9 +86,9 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 - [x] Fix C6: add admin role bypass in status update — skip sequential validation for `ADMIN`
 - [x] Fix S1: lock down `/actuator/**` to `ADMIN` role or localhost only
 - [x] Fix S3: replace `System.getenv()` with `@Value` for CORS origins
-- [ ] Build M1: `AddressController` + `AddressService` — `GET /addresses`, `POST /addresses`, `PUT /addresses/{id}`, `DELETE /addresses/{id}`, `PUT /addresses/{id}/default`
-- [ ] Fix C3: add `createdAt` to `UserResponse` and expose from `AuthService.toUserResponse()`
-- [ ] Build C2: `GET /admin/users` endpoint
+- [x] Build M1: `AddressController` + `AddressService` — `GET /addresses`, `POST /addresses`, `PUT /addresses/{id}`, `DELETE /addresses/{id}`, `PUT /addresses/{id}/default`
+- [x] Fix C3: add `createdAt` to `UserResponse` and expose from `AuthService.toUserResponse()`
+- [x] Build C2: `GET /admin/users` endpoint (paginated + role filter)
 
 **Frontend Dev**
 - [ ] Fix C5: use `new Date(date + 'T00:00:00')` or UTC-aware formatting on all date displays
@@ -101,11 +101,11 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 ### Week 2 — Payments + Notifications
 
 **Backend Dev**
-- [ ] Fix S5: enable CSRF protection for cookie-authenticated endpoints
-- [ ] Fix S2: sanitize `specialInstructions` — strip HTML, limit length
-- [ ] Build M3: payment integration — create order → payment intent → webhook to confirm booking
-- [ ] Fix Q2: merge `getServicesByCategory()` into single JOIN query
-- [ ] Fix Q5: add `GET /admin/alterations/revenue-summary` endpoint, remove client-side revenue calculation
+- [x] Fix S5: CSRF protection via `OriginValidationFilter` (origin allow-list on mutating requests, pairs with SameSite=Lax)
+- [x] Fix S2: sanitize `specialInstructions` + all free-text fields via `InputSanitizer` (strip HTML/control chars)
+- [x] Build M3: payment integration — Razorpay (test-mode verified) + mock provider, checkout/verify endpoints, wizard payment step. **Remaining: `payment.captured` webhook before go-live**
+- [x] Fix Q2: merge `getServicesByCategory()` into single JOIN FETCH query
+- [x] Fix Q5: add `GET /admin/alterations/revenue-summary` endpoint (frontend still needs to switch to it)
 - [ ] Build M4: notification service — booking confirmed, tailor assigned, out for delivery, delivered emails
 
 **Frontend Dev**
@@ -143,7 +143,7 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 - [ ] Configure production `application-prod.properties` — real secrets via env, Kafka enabled
 - [ ] Add Flyway V9 migration: indexes on `alteration_orders(user_id)`, `alteration_orders(tailor_id)`, `alteration_orders(status)`
 - [ ] Set up health check — expose `/actuator/health` (public, read-only) and lock down the rest
-- [ ] Fix Q10: add `connectTimeout` and `readTimeout` to `ApiEndpoints` HTTP client
+- [x] Fix Q10: 15s `AbortSignal.timeout` on all `ApiClient` requests
 
 **Frontend Dev**
 - [ ] Write Playwright e2e tests: register → book alteration → view order (happy path)
