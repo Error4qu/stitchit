@@ -143,7 +143,13 @@ public class AlterationOrderService {
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException(
                         "Alteration order not found: " + orderId));
 
-        validateStatusTransition(order.getStatus(), request.getStatus());
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("User not found"));
+
+        // Admins can set any status to unblock stuck orders; tailors follow the sequence
+        if (user.getRole() != Role.ADMIN) {
+            validateStatusTransition(order.getStatus(), request.getStatus());
+        }
         order.setStatus(request.getStatus());
 
         if (request.getTailorNotes() != null) {
@@ -192,7 +198,7 @@ public class AlterationOrderService {
 
     private void validateStatusTransition(AlterationStatus current, AlterationStatus next) {
         boolean valid = switch (current) {
-            case BOOKED -> next == AlterationStatus.TAILOR_ASSIGNED || next == AlterationStatus.BOOKED;
+            case BOOKED -> next == AlterationStatus.TAILOR_ASSIGNED;
             case TAILOR_ASSIGNED -> next == AlterationStatus.TAILOR_VISITED;
             case TAILOR_VISITED -> next == AlterationStatus.GARMENT_COLLECTED;
             case GARMENT_COLLECTED -> next == AlterationStatus.IN_ALTERATION;

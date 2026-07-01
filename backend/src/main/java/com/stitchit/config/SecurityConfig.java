@@ -4,6 +4,7 @@ import com.stitchit.security.JwtAuthenticationFilter;
 import com.stitchit.security.OAuth2AuthenticationSuccessHandler;
 import com.stitchit.security.OAuth2UserService;
 import com.stitchit.security.RateLimitFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -25,6 +26,9 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    @Value("${cors.origins:http://localhost:3000,http://localhost:3001,http://localhost:3002}")
+    private String corsOrigins;
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
@@ -74,7 +78,8 @@ public class SecurityConfig {
                     "/api/v1/alterations/categories/**"
                 ).permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/actuator/**").hasRole("ADMIN")
                 .requestMatchers("/api-docs/**", "/swagger-ui/**",
                         "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
@@ -92,9 +97,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        String originsEnv = System.getenv().getOrDefault("CORS_ORIGINS",
-                "http://localhost:3000,http://localhost:3001,http://localhost:3002");
-        configuration.setAllowedOrigins(Arrays.asList(originsEnv.split(",")));
+        configuration.setAllowedOrigins(Arrays.asList(corsOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
