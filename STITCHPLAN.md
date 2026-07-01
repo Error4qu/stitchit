@@ -15,16 +15,16 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 | C3 | Admin users page crashes — `UserResponse` has no `createdAt` field but UI renders it | Backend Dev | `UserResponse.java` | Open |
 | C4 | `cookie.setSecure(false)` hardcoded — breaks HTTPS auth in production | Backend Dev | `CookieUtils.java` | **Fixed** |
 | C5 | Order date display has timezone bug — `new Date(order.scheduledDate).toLocaleDateString()` interprets UTC as local | Frontend Dev | `alterations/orders/[id]/page.tsx` | Open |
-| C6 | Admin cannot freely override order status — hits same sequential `validateStatusTransition()` as tailor | Backend Dev | `AlterationOrderService.java` | Open |
+| C6 | Admin cannot freely override order status — hits same sequential `validateStatusTransition()` as tailor | Backend Dev | `AlterationOrderService.java` | **Fixed** |
 | C7 | `RateLimitFilter` rate-limited `/auth/me` and `/auth/refresh` — blocked normal page loads | Backend Dev | `RateLimitFilter.java` | **Fixed** |
 
 ### Security Issues
 
 | ID | Issue | Assigned | File | Status |
 |----|-------|----------|------|--------|
-| S1 | `/actuator/**` fully public — exposes heap dumps, env vars, beans | Backend Dev | `SecurityConfig.java` | Open |
+| S1 | `/actuator/**` fully public — exposes heap dumps, env vars, beans | Backend Dev | `SecurityConfig.java` | **Fixed** |
 | S2 | No input sanitization on `specialInstructions` field | Backend Dev | `AlterationOrderService.java` | Open |
-| S3 | `CORS_ORIGINS` uses `System.getenv()` instead of `@Value` — silent null on misconfiguration | Backend Dev | `SecurityConfig.java` | Open |
+| S3 | `CORS_ORIGINS` uses `System.getenv()` instead of `@Value` — silent null on misconfiguration | Backend Dev | `SecurityConfig.java` | **Fixed** |
 | S4 | `X-Forwarded-For` blindly trusted in rate limiter — IP spoofable | Backend Dev | `RateLimitFilter.java` | **Fixed** |
 | S5 | No CSRF protection on cookie-based auth endpoints | Backend Dev | `SecurityConfig.java` | Open |
 
@@ -49,7 +49,7 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 |----|-------|----------|------|--------|
 | Q1 | Status colors/labels duplicated across 3 pages — extract to shared constant | Frontend Dev | Multiple | Open |
 | Q2 | `getServicesByCategory()` makes 2 DB calls — combine into one | Backend Dev | `AlterationOrderService.java` | Open |
-| Q3 | `validateStatusTransition()` allows `BOOKED → BOOKED` no-op | Backend Dev | `AlterationOrderService.java` | Open |
+| Q3 | `validateStatusTransition()` allows `BOOKED → BOOKED` no-op | Backend Dev | `AlterationOrderService.java` | **Fixed** |
 | Q4 | All listing pages use hardcoded `size` — no pagination support | Frontend Dev | Multiple | Open |
 | Q5 | Admin revenue calculated client-side from all loaded orders — move to backend | Backend Dev | `admin/alterations/page.tsx` | Open |
 | Q6 | `refetchInterval: 30s` on tailor portal — should be configurable or use WebSocket | Backend Dev | `tailor/alterations/page.tsx` | Open |
@@ -82,10 +82,10 @@ Two developers: **Backend Dev** (Spring Boot, infra, APIs) and **Frontend Dev** 
 - [x] Fix C4: `cookie.setSecure()` now driven by `app.cookie.secure` env property via `CookieUtils`
 - [x] Fix C7: `RateLimitFilter.shouldNotFilter()` now only applies to `/auth/login` and `/auth/register`
 - [x] Fix S4: `X-Forwarded-For` only trusted from IPs listed in `app.rate-limit.trusted-proxies`
-- [ ] Fix Q3: patch `validateStatusTransition()` — remove `BOOKED → BOOKED` no-op case
-- [ ] Fix C6: add admin role bypass in status update — skip sequential validation for `ADMIN`
-- [ ] Fix S1: lock down `/actuator/**` to `ADMIN` role or localhost only
-- [ ] Fix S3: replace `System.getenv()` with `@Value` for CORS origins
+- [x] Fix Q3: patch `validateStatusTransition()` — remove `BOOKED → BOOKED` no-op case
+- [x] Fix C6: add admin role bypass in status update — skip sequential validation for `ADMIN`
+- [x] Fix S1: lock down `/actuator/**` to `ADMIN` role or localhost only
+- [x] Fix S3: replace `System.getenv()` with `@Value` for CORS origins
 - [ ] Build M1: `AddressController` + `AddressService` — `GET /addresses`, `POST /addresses`, `PUT /addresses/{id}`, `DELETE /addresses/{id}`, `PUT /addresses/{id}/default`
 - [ ] Fix C3: add `createdAt` to `UserResponse` and expose from `AuthService.toUserResponse()`
 - [ ] Build C2: `GET /admin/users` endpoint
