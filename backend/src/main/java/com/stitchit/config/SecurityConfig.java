@@ -70,9 +70,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/v1/auth/**",
-                    "/api/v1/public/**",
-                    "/api/v1/fabrics/**",
-                    "/api/v1/styles/**",
                     "/api/v1/alterations/categories",
                     "/api/v1/alterations/categories/**"
                 ).permitAll()

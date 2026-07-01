@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // If not in header, check cookies
         if (jwt == null && request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
-                if ("jwt".equals(cookie.getName())) {
+                if (CookieUtils.ACCESS_TOKEN_COOKIE.equals(cookie.getName())) {
                     jwt = cookie.getValue();
                     break;
                 }

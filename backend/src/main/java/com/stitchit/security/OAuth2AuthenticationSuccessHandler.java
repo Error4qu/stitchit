@@ -1,7 +1,6 @@
 package com.stitchit.security;
 
 import com.stitchit.service.AuthService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,13 +15,16 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private final JwtService jwtService;
     private final AuthService authService;
+    private final CookieUtils cookieUtils;
 
     @Value("${frontend.customer-url:http://localhost:3000}")
     private String customerFrontendUrl;
 
-    public OAuth2AuthenticationSuccessHandler(JwtService jwtService, AuthService authService) {
+    public OAuth2AuthenticationSuccessHandler(JwtService jwtService, AuthService authService,
+                                              CookieUtils cookieUtils) {
         this.jwtService = jwtService;
         this.authService = authService;
+        this.cookieUtils = cookieUtils;
     }
 
     @Override
@@ -37,21 +39,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         authService.storeRefreshToken(jwtService.extractJti(refreshToken),
                 String.valueOf(userPrincipal.getId()));
 
-        addCookie(response, "jwt", accessToken, 15 * 60);
-        addCookie(response, "refresh_token", refreshToken,
-                (int) (jwtService.getRefreshExpiration() / 1000));
+        cookieUtils.setAuthCookies(response, accessToken, refreshToken);
 
         clearAuthenticationAttributes(request);
         getRedirectStrategy().sendRedirect(request, response,
                 customerFrontendUrl + "/auth/callback?oauth=true");
-    }
-
-    private void addCookie(HttpServletResponse response, String name, String value, int maxAgeSeconds) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(maxAgeSeconds);
-        response.addCookie(cookie);
     }
 }
